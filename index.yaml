@@ -1,0 +1,6 @@
+indexes:
+- kind: Record
+  ancestor: yes
+  properties:
+  - name: Identifier
+    direction: desc

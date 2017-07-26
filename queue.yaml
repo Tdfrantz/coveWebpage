@@ -1,0 +1,5 @@
+queue:
+- name: caller-push-queue
+  rate: 1/s
+- name: cron-pull-queue
+  mode: pull

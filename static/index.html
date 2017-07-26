@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>COVE Tester</title>
+	<meta charset="UTF-8" />
+</head>
+
+<body>
+	<h1>COVE Tester</h1>
+	<form action="/caller" method="post">
+    <div><select name="requestType">
+        <option value="Ping">Ping</option>
+        <option value="ProductMetadataFetch">ProductMetadataFetch</option>
+        <option value="ProductInventoryUpdate">ProductInventoryUpdate</option>
+    </select></div>
+    <div><input type="Submit" value="Send Request">
+    </form>
+</body>
+</html>
