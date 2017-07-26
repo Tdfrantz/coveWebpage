@@ -2,7 +2,7 @@ package coveapi
 
 import (
 	"net/http"
-	"google.golang.org/appengine"
+	//"google.golang.org/appengine"
 )
 
 func post(w http.ResponseWriter,r *http.Request){
