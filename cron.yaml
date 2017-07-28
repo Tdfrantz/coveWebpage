@@ -1,5 +1,4 @@
 cron:
 - description: "Check the pull queue for Tasks"
   url: /cron
-  target: notTooSureWhatToPutHere
   schedule: every 1 minutes

@@ -2,11 +2,15 @@ package coveapi
 
 import (	
 	"net/http"
+	"google.golang.org/appengine/urlfetch"
 	"encoding/hex"
 	"encoding/json"
+	"golang.org/x/net/context"
+	// "google.golang.org/appengine/log"
 	"crypto/md5"
 	"io/ioutil"
 	"bytes"
+	"errors"
 )
 
 var covePostURL = "https://mhsgen2two.appspot.com/api/proxy/v0/post"
@@ -33,7 +37,9 @@ func calcPayloadSignature(secretKey string, accessIdentifier string, payload []b
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func post(client *http.Client, accessIdentifier string, secretKey string, payload []byte) (string, error){
+func post(ctx context.Context, accessIdentifier string, secretKey string, payload []byte) (string, error){
+
+	client := urlfetch.Client(ctx)
 
 	req, _ := http.NewRequest("POST", covePostURL, bytes.NewReader(payload))
 	req.Header.Add("X-Access-Identifier", accessIdentifier)
@@ -46,7 +52,7 @@ func post(client *http.Client, accessIdentifier string, secretKey string, payloa
 	}
 	defer res.Body.Close()
 
-	b, _ := ioutil.ReadAll(res.Body)	
+	b, _ := ioutil.ReadAll(res.Body)
 	var resJson map[string]interface{}
 	err = json.Unmarshal(b, &resJson)
 	if err!=nil{
@@ -54,7 +60,11 @@ func post(client *http.Client, accessIdentifier string, secretKey string, payloa
 		// mark it as bad and log it
 		return interaction, err
 	}
-	// payload, _ := json.Marshal(block)
 
-	return interaction, nil
+	if interaction, ok := resJson["interaction"].(string); ok {
+		return interaction, nil
+	} else {
+		reason, _ := json.Marshal(resJson["reason"])
+		return interaction, errors.New(string(reason[:]))
+	}
 }

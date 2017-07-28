@@ -1,7 +1,11 @@
 indexes:
 - kind: Record
-  ancestor: yes
+  ancestor: no
   properties:
   - name: RequestType
   - name: SubmittedTimestamp
-  
+  - name: LastPeekedTimestamp
+  - name: Interaction
+  - name: Reason
+  - name: Success
+  - name: Completed

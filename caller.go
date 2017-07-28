@@ -15,13 +15,20 @@ import (
 type Record struct{
 	RequestType string
 	SubmittedTimestamp time.Time
+	LastPeekedTimestamp time.Time
 	Interaction string
+	Reason string
+	Success bool
+	Completed bool
 }
 
 func init(){
 	http.HandleFunc("/", index)
 	http.HandleFunc("/caller", caller)
 	http.HandleFunc("/helperPost", helperPost)
+	http.HandleFunc("/helperPeek", helperPeek)
+	http.HandleFunc("/cron", cron)
+	http.HandleFunc("/helperEmail", helperEmail)
 }
 
 func index(w http.ResponseWriter, r *http.Request){
@@ -44,25 +51,30 @@ func caller(w http.ResponseWriter, r *http.Request){
 
 	v, p, _ := validate(r,c)
 	if v{
-		//formData := map[string]string{}
-		render(w, "static/index.html", nil)
-		return
+		// //formData := map[string]string{}
+		// render(w, "static/index.html", nil)
+		// return
+		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 	}
 
 	// Create a datastore entry for this request
 	record := &Record{
 		RequestType:r.FormValue("requestType"),
 		SubmittedTimestamp:time.Now(),
+		LastPeekedTimestamp:time.Now(),
+		Success:false,
 	}
 
 	key := datastore.NewIncompleteKey(c, "Record", nil)
 	err := datastore.RunInTransaction(c, func(c context.Context) error{
-			if _, putErr := datastore.Put(c, key, record); putErr!=nil{
+			key, putErr := datastore.Put(c, key, record)
+			if putErr!=nil{
 				return putErr	
 			}
 			
 			v := url.Values{}
-			v.Add("datastoreKey", key.String())
+			v.Add("datastoreKey", key.Encode())
+			v.Add("email_address", "tdfrantz@mhsystems.com")
 			v.Add("requestType", p["requestType"])
 			v.Add("secretKey", p["secretKey"])
 			v.Add("accessIdentifier", p["accessIdentifier"])
