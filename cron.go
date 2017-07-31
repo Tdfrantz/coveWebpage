@@ -26,26 +26,45 @@ func cron(w http.ResponseWriter, r *http.Request){
 	for _, t := range tasks{
 		log.Infof(c, "Cron payload: %s", t.Payload)
 		v := url.Values{}
-		err := json.Unmarshal(t.Payload, v)
+		err := json.Unmarshal(t.Payload, &v)
 		if err!=nil{
-			logErrorAndReturnInternalServerError(c, err, w)
+			logError(c, err)
+			continue
 		}
 
 		datastoreKey, _:= datastore.DecodeKey(v.Get("datastoreKey"))
 		record := new(Record)
 		if err := datastore.Get(c, datastoreKey, record); err!=nil{
-			logErrorAndReturnInternalServerError(c, err, w)
+			logError(c, err)
+			continue
 		}
+
+		endpoint := ""
 
 		if record.Completed{
-			// Send it on to the email endpoint
-		} else if record.LastPeekedTimestamp.Sub(record.SubmittedTimestamp).Minutes()>=2{
-			log.Infof(c, "More than 2 minutes!")
-			// Mark it as completed with reason timed_out and send it on to the email endpoint
+			// Record has already been marked as completed by the peek helper
+			endpoint = "/helperEmail"
+		} else if record.LastPeekedTimestamp.Sub(record.SubmittedTimestamp).Minutes()>=float64(record.PeekTimeout){
+			// Record has not been marked as completed by the peek helper, but the peek timeout has been reached
+			record.Completed = true
+			record.Reason = "Time out value reached."
+			_, err := datastore.Put(c, datastoreKey, record)
+			if err!=nil{
+				logError(c, err)
+				continue
+			}
+			endpoint = "/helperEmail"
 		} else {
-			// Send it back to the push queue with the helperPeek endpoint
+			endpoint = "/helperPeek"
 		}
 
-		// Delete the task
+		pt := taskqueue.NewPOSTTask(endpoint, v)
+		if _, err := taskqueue.Add(c, pt, "caller-push-queue"); err!=nil{
+			logError(c, err)
+		}
+
+		taskqueue.Delete(c, t, "cron-pull-queue")
 	}
+	
+	// THOMAS : Need to write a response
 }

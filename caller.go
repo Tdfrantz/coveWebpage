@@ -9,6 +9,7 @@ import (
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/taskqueue"
 	"google.golang.org/appengine"
+	"strconv"
 	// "google.golang.org/appengine/log"
 )
 
@@ -16,10 +17,12 @@ type Record struct{
 	RequestType string
 	SubmittedTimestamp time.Time
 	LastPeekedTimestamp time.Time
+	PeekTimeout int
 	Interaction string
 	Reason string
 	Success bool
 	Completed bool
+	Result string
 }
 
 func init(){
@@ -57,12 +60,15 @@ func caller(w http.ResponseWriter, r *http.Request){
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 	}
 
+	timeout, _ := strconv.Atoi(r.FormValue("peekTimeout"))
 	// Create a datastore entry for this request
 	record := &Record{
 		RequestType:r.FormValue("requestType"),
 		SubmittedTimestamp:time.Now(),
 		LastPeekedTimestamp:time.Now(),
+		PeekTimeout:timeout,
 		Success:false,
+		Completed:false,
 	}
 
 	key := datastore.NewIncompleteKey(c, "Record", nil)
@@ -74,7 +80,7 @@ func caller(w http.ResponseWriter, r *http.Request){
 			
 			v := url.Values{}
 			v.Add("datastoreKey", key.Encode())
-			v.Add("email_address", "tdfrantz@mhsystems.com")
+			v.Add("emailAddress", "tdfrantz@mhsystems.com")
 			v.Add("requestType", p["requestType"])
 			v.Add("secretKey", p["secretKey"])
 			v.Add("accessIdentifier", p["accessIdentifier"])

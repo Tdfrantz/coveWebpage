@@ -29,6 +29,14 @@ type connectionBlock struct{
 	Payload map[string]interface{}	`json:"payload,omitempty"`
 }
 
+// Contains all the possible fields that can be returned from the peek call
+type peekResponse struct{
+	ResponseMessageUnavailable bool `json:"response_message_unavailable,omitempty"`
+	AssetURL string 				`json:"asset_url,omitempty"`
+	Success bool 					`json:"success,omitempty"`
+
+}
+
 func calcPayloadSignature(secretKey string, accessIdentifier string, payload []byte) string{
 	h := md5.New()
 	h.Write([]byte(secretKey))
@@ -37,7 +45,7 @@ func calcPayloadSignature(secretKey string, accessIdentifier string, payload []b
 	return hex.EncodeToString(h.Sum(nil))
 }
 
-func post(ctx context.Context, accessIdentifier string, secretKey string, payload []byte) (string, error){
+func post(ctx context.Context, accessIdentifier string, secretKey string, payload []byte) (interaction string, err error){
 
 	client := urlfetch.Client(ctx)
 
@@ -45,12 +53,15 @@ func post(ctx context.Context, accessIdentifier string, secretKey string, payloa
 	req.Header.Add("X-Access-Identifier", accessIdentifier)
 	req.Header.Add("X-Payload-Signature", calcPayloadSignature(secretKey,accessIdentifier,payload))
 	res, err := client.Do(req)
-	interaction := ""
 
 	if err!=nil{
 		return interaction, err
 	}
 	defer res.Body.Close()
+
+	// THOMAS : NEED TO REFACTOR THIS
+	// THIS FUNCTION SHOULD JUST GET THE RESPONSE AND PASS THE BODY BACK
+	// LET THE helperPost DO THE PARSING LIKE THE helperPeek WILL DO
 
 	b, _ := ioutil.ReadAll(res.Body)
 	var resJson map[string]interface{}
@@ -67,4 +78,25 @@ func post(ctx context.Context, accessIdentifier string, secretKey string, payloa
 		reason, _ := json.Marshal(resJson["reason"])
 		return interaction, errors.New(string(reason[:]))
 	}
+}
+
+// This function returns a []byte body which will contain the COVE response, and an error
+func peek(ctx context.Context, accessIdentifier string, secretKey string, payload []byte) (body []byte, err error){
+	
+	client := urlfetch.Client(ctx)
+	req, _ := http.NewRequest("POST", covePeekURL, bytes.NewReader(payload))
+	req.Header.Add("X-Access-Identifier", accessIdentifier)
+	req.Header.Add("X-Payload-Signature", calcPayloadSignature(secretKey,accessIdentifier,payload))
+	res, err := client.Do(req)
+	if err!=nil{
+		return []byte(""),err
+	}
+	defer res.Body.Close()
+	
+	b, err := ioutil.ReadAll(res.Body)
+	if err!=nil{
+		return []byte(""),err
+	}
+
+	return b, nil
 }

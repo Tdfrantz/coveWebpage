@@ -5,7 +5,9 @@ indexes:
   - name: RequestType
   - name: SubmittedTimestamp
   - name: LastPeekedTimestamp
+  - name: PeekTimeout
   - name: Interaction
   - name: Reason
   - name: Success
   - name: Completed
+  - name: Result
