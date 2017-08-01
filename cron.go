@@ -13,15 +13,12 @@ import (
 
 func cron(w http.ResponseWriter, r *http.Request){
 	c := appengine.NewContext(r)
-	log.Infof(c,"Entering the cron")
 	// Pull a group of tasks from the pull queue
 	tasks, err := taskqueue.Lease(c, 60, "cron-pull-queue", 60)
 
 	if err!=nil{
 		logErrorAndReturnInternalServerError(c, err, w)	
 	}
-
-	log.Infof(c,"Got the tasks!")
 
 	for _, t := range tasks{
 		log.Infof(c, "Cron payload: %s", t.Payload)
@@ -42,29 +39,36 @@ func cron(w http.ResponseWriter, r *http.Request){
 		endpoint := ""
 
 		if record.Completed{
+			log.Infof(c,"Already completed %s", record.Completed)
 			// Record has already been marked as completed by the peek helper
 			endpoint = "/helperEmail"
-		} else if record.LastPeekedTimestamp.Sub(record.SubmittedTimestamp).Minutes()>=float64(record.PeekTimeout){
+		} else if record.LastPeekedTimestamp.Sub(record.SubmittedTimestamp).Seconds()>=float64(record.PeekTimeout){
 			// Record has not been marked as completed by the peek helper, but the peek timeout has been reached
 			record.Completed = true
 			record.Reason = "Time out value reached."
+			log.Infof(c,"Ran out of time...")
 			_, err := datastore.Put(c, datastoreKey, record)
 			if err!=nil{
 				logError(c, err)
 				continue
 			}
+			log.Infof(c,"Record has been marked invalid: %s", record.Reason)
 			endpoint = "/helperEmail"
 		} else {
+			log.Infof(c,"Putting it back in the queue")
 			endpoint = "/helperPeek"
 		}
 
 		pt := taskqueue.NewPOSTTask(endpoint, v)
+		log.Infof(c, "We're going to the endpoint: %s", endpoint)
 		if _, err := taskqueue.Add(c, pt, "caller-push-queue"); err!=nil{
 			logError(c, err)
 		}
 
-		taskqueue.Delete(c, t, "cron-pull-queue")
+		if err := taskqueue.Delete(c, t, "cron-pull-queue"); err!= nil{
+			logError(c, err)
+		}
 	}
 	
-	// THOMAS : Need to write a response
+	w.WriteHeader(http.StatusOK)
 }

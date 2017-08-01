@@ -102,7 +102,7 @@ func caller(w http.ResponseWriter, r *http.Request){
 		}, nil)
 
 	if err!=nil{
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logErrorAndReturnInternalServerError(c, err, w)
 	}
 
 }
@@ -181,6 +181,13 @@ func validate(r *http.Request,c context.Context) (bool, map[string]string, map[s
 		errors["instanceName"] = "Invalid instance name value."
 	} else {
 		params["instanceName"] = instanceName
+	}
+
+	if emailAddress := r.FormValue("emailAddress"); emailAddress == ""{
+		missingParams=true
+		errors["emailAddress"] = "Invalid email address value."
+	} else {
+		params["emailAddress"] = emailAddress
 	}
 
 	return missingParams, params, errors

@@ -15,7 +15,7 @@ import (
 
 var covePostURL = "https://mhsgen2two.appspot.com/api/proxy/v0/post"
 var covePeekURL = "https://mhsgen2two.appspot.com/api/proxy/v0/peek"
-var coveDumpURL = "https://mhsgen2two.appspot.com/api/proxy/v0/dumpeventlog"
+// var coveDumpURL = "https://mhsgen2two.appspot.com/api/proxy/v0/dumpeventlog"
 
 type connectionBlock struct{
 	DatabaseName string				`json:"database_name,omitempty"`

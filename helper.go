@@ -8,7 +8,7 @@ import (
 	"google.golang.org/appengine/taskqueue"
 	"google.golang.org/appengine/mail"
 	"golang.org/x/net/context"
-	"google.golang.org/appengine/log"
+	// "google.golang.org/appengine/log"
 	"encoding/json"
 	"time"
 )
@@ -79,7 +79,7 @@ func helperPost(w http.ResponseWriter,r *http.Request){
 			// v.Add("apiEndpoint", block.ApiEndpoint)
 			// v.Add("rmsType", block.RMSType)
 			// v.Add("instanceName", block.InstanceName)
-			v.Add("email_address", r.FormValue("emailAddress"))
+			v.Add("emailAddress", r.FormValue("emailAddress"))
 			v.Add("interaction", interaction)
 
 			t.Payload, err =json.Marshal(v)
@@ -94,10 +94,10 @@ func helperPost(w http.ResponseWriter,r *http.Request){
 		}, nil)
 
 	if err!=nil{
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logErrorAndReturnInternalServerError(c, err, w)
 	}
 
-	w.Write([]byte("Interaction was successfully submitted"))
+	w.WriteHeader(http.StatusOK)
 }
 
 func helperPeek(w http.ResponseWriter,r *http.Request){
@@ -117,12 +117,10 @@ func helperPeek(w http.ResponseWriter,r *http.Request){
 		logErrorAndReturnInternalServerError(c, err, w)
 	}
 
-	log.Infof(c,"Submitting payload %s", payload)
 	body, err := peek(c, accessIdentifier, secretKey, payload)
 	if err != nil{
 		logErrorAndReturnInternalServerError(c, err, w)
 	}
-	log.Infof(c,"Got the body from peek: %s", body)
 	
 	var jbody map[string]interface{}
 	err = json.Unmarshal(body, &jbody)
@@ -159,21 +157,13 @@ func helperPeek(w http.ResponseWriter,r *http.Request){
 			record.Result = asset_url.(string)
 		}
 	} else {
-		// v.Add("requestType", block.RequestType)
 		v.Add("secretKey", secretKey)
 		v.Add("accessIdentifier", accessIdentifier)
-		// v.Add("databaseName",block.DatabaseName)
-		// v.Add("databaseUsername", block.DatabaseLoginName)
-		// v.Add("databasePassword", block.DatabaseLoginPassword)
-		// v.Add("databaseServer", block.DatabaseServer)
-		// v.Add("apiEndpoint", block.ApiEndpoint)
-		// v.Add("rmsType", block.RMSType)
-		// v.Add("instanceName", block.InstanceName)
 		v.Add("interaction", block.Payload["interaction"].(string))
 	}
 
 	v.Add("datastoreKey", datastoreKey.Encode())
-	v.Add("email_address", r.FormValue("emailAddress"))
+	v.Add("emailAddress", r.FormValue("emailAddress"))
 
 	t := &taskqueue.Task{Method:"PULL",}	
 	t.Payload, err = json.Marshal(v)
@@ -190,12 +180,13 @@ func helperPeek(w http.ResponseWriter,r *http.Request){
 		logErrorAndReturnInternalServerError(c, err, w)
 	}
 
+	w.WriteHeader(http.StatusOK)
 }
 
 func helperEmail(w http.ResponseWriter, r *http.Request){
 	c := appengine.NewContext(r)
 	msg := &mail.Message{
-		Sender: "Big Daddy Tizzle <tdfrantz@mhsytems.com>",
+		Sender: "tdfrantz@mhsytems.com",
 		To: []string{r.FormValue("emailAddress")},
 		Subject: "See you tonight",
 	}
@@ -213,7 +204,8 @@ func helperEmail(w http.ResponseWriter, r *http.Request){
 	}
 
 	if err:=mail.Send(c,msg); err!=nil{
-		logErrorAndReturnInternalServerError(c, err, w)
+		http.Error(w, err.Error(), http.StatusOK)
 	}
 
+	w.WriteHeader(http.StatusOK)
 }
