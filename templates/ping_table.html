@@ -1,0 +1,11 @@
+{{define "reportTable"}}
+<table>
+	<tr><td>Request Type:</td><td>Ping</td></tr>
+	<tr><td>Success: </td><td>{{.Success}}</td></tr>
+	{{if eq .Success "false"}}
+	<tr><td>Reason: </td><td>{{.Reason}}</td></tr>
+	{{end}}
+	<tr><td>Submitted Timestamp: </td><td>{{.SubmittedTimestamp}}</td></tr>
+	<tr><td>Last Peeked Timestamp: </td><td>{{.LastPeekedTimestamp}}</td></tr>
+</table>
+{{end}}

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>COVE Tester</title>
+	<meta charset="UTF-8" content="text/html"/>
+	<style>
+	td.error {
+	    color: red;
+	    padding-left: 20px;
+	    font-family: "Courier New";
+	    font-size: 14px;
+
+	} 
+</style>
+</head>
+
+<body>
+	<h1>COVE Tester</h1>
+	<form method="post">
+    <div>
+        {{with index . "requestType"}}
+        <select name="requestType">
+        <option value="Ping" {{if eq .Value "Ping"}} {{print "selected"}} {{end}}>Ping</option>
+        <option value="ProductMetadataFetch" {{if eq .Value "ProductMetadataFetch"}} {{print "selected"}} {{end}}>ProductMetadataFetch</option>
+        <option value="ProductInventoryUpdate" {{if eq .Value "ProductInventoryUpdate"}} {{print "selected"}} {{end}}>ProductInventoryUpdate</option>
+        {{end}}
+    </select></div>
+   
+    <br>
+    <div>
+    <table>
+        <thead><h3>Connection Parameters<h3></thead>
+
+        <tr>
+        {{with index . "peekTimeout"}}
+            <td>Peek Timeout: </td>
+            <td><input type="number" id="peekTimeout" name="peekTimeout" value="{{.Value}}"/></td>
+            <td class="error">{{.ErrorMsg}}</td>
+        {{end}}
+        </tr>
+
+    
+        <tr>
+        {{with index . "accessIdentifier"}}
+        	<td>Access Identifier: </td>
+        	<td><input type="text" id="accessIdentifier" name="accessIdentifier" value="{{.Value}}"/></td>
+            <td class="error">{{.ErrorMsg}}</td>
+        {{end}}
+        </tr>
+
+        <tr>
+        {{with index . "secretKey"}}
+	        <td>Secret Key: </td>
+	        <td><input type="text" id="secretKey" name="secretKey" value="{{.Value}}"/></td>
+        	<td class="error">{{.ErrorMsg}}</td>
+        {{end}}
+        </tr>
+
+        <tr>
+        {{with index . "databaseName"}}
+			<td>Database Name: </td>
+			<td><input type="text" id="databaseName" name="databaseName" value="{{.Value}}"/></td>
+			<td class="error">{{.ErrorMsg}}</td>
+		{{end}}
+		</tr>
+
+        <tr>
+        {{with index . "databaseUsername"}}
+      		<td>Database Login Username: </td>
+      		<td><input type="text" id="databaseUsername" name="databaseUsername" value="{{.Value}}"/></td>
+        	<td class="error">{{.ErrorMsg}}</td>
+        {{end}}
+        </tr>
+
+        <tr>
+        {{with index . "databasePassword"}}
+        	<td>Database Login Password: </td>
+        	<td><input type="text" id="databasePassword" name="databasePassword" value="{{.Value}}"/></td>
+        	<td class="error">{{.ErrorMsg}}</td>
+        {{end}}
+        </tr>
+
+        <tr>
+        {{with index . "databaseServer"}}
+        	<td>Database Server: </td>
+        	<td><input type="text" id="databaseServer" name="databaseServer" value="{{.Value}}"/></td>
+        	<td class="error">{{.ErrorMsg}}</td>
+        {{end}}
+        </tr>
+
+        <tr>
+        {{with index . "apiEndpoint"}}
+        	<td>API Endpoint: </td>
+        	<td><input type="text" id="apiEndpoint" name="apiEndpoint" value="{{.Value}}"/></td>
+        	<td class="error">{{.ErrorMsg}}</td>
+        {{end}}
+        </tr>
+
+        <tr>
+        {{with index . "rmsType"}}
+        	<td>RMS Type: </td><td><select id="rmsType" name="rmsType">
+           		<option value="fashion" {{if eq .Value "fashion"}} {{print "selected"}} {{end}}>fashion</option>
+            	<option value="gm" {{if eq .Value "gm"}} {{print "selected"}} {{end}}>gm</option>
+        	</select></td>
+        	<td class="error">{{.ErrorMsg}}</td>
+        {{end}}
+        </tr>
+
+        <tr>
+        {{with index . "instanceName"}}
+        	<td>Instance Name: </td>
+        	<td><input type="text" id="instanceName" name="instanceName" value="{{.Value}}"/></td>
+        	<td class="error">{{.ErrorMsg}}</td>
+        {{end}}
+        </tr>
+
+        <tr><td colspan="3">&nbsp</td></tr>
+
+        <tr>
+        {{with index . "emailAddress"}}
+        	<td>Email Address: </td>
+        	<td> <input type="email" id="emailAddress" name="emailAddress" value="{{.Value}}"/></td>
+        	<td class="error">{{.ErrorMsg}}</td>
+        {{end}}
+        </tr>
+    </table>
+    <div><input type="Submit" value="Send Request"></div>
+    </form>
+    {{with index . "confirmation"}}
+        {{if not (eq .Value "")}}
+    <br>
+    <div>    
+        <h3>{{.Value}}</h3>
+    </div>
+        {{end}}
+    {{end}}
+</body>
+</html>

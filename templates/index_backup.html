@@ -7,20 +7,19 @@
 
 <body>
 	<h1>COVE Tester</h1>
-	<form action="/caller" method="post">
+	<form method="post">
     <div><select name="requestType">
         <option value="Ping">Ping</option>
         <option value="ProductMetadataFetch">ProductMetadataFetch</option>
         <option value="ProductInventoryUpdate">ProductInventoryUpdate</option>
     </select></div>
-    Email Address: <input type="email" id="emailAddress" name="emailAddress">
+   
     <br>
     <div>
-    <table><tr><td>Peek Timeout </td><td><input type="number" id="peekTimeout" name="peekTimeout"/></td></tr>
+    <table><tr><td>Peek Timeout: </td><td><input type="number" id="peekTimeout" name="peekTimeout"/></td></tr>
         <thead><h3>Connection Parameters<h3></thead>
         <tr><td>Access Identifier: </td><td><input type="text" id="accessIdentifier" name="accessIdentifier"/></td></tr>
         <tr><td>Secret Key: </td><td><input type="text" id="secretKey" name="secretKey"/></td></tr>
-        <!--<tr><td colspan="2"><button id="fillConnectionFields" type="button">Fill Connection Fields</button></tr>-->
         <tr><td>Database Name: </td><td><input type="text" id="databaseName" name="databaseName"/></td></tr>
         <tr><td>Database Login Username: </td><td><input type="text" id="databaseUsername" name="databaseUsername"/></td></tr>
         <tr><td>Database Login Password: </td><td><input type="text" id="databasePassword" name="databasePassword"/></td></tr>
@@ -31,8 +30,9 @@
             <option value="gm">gm</option>
         </select></td></tr>
         <tr><td>Instance Name: </td><td><input type="text" id="instanceName" name="instanceName"/></td></tr>
+        <tr><td colspan="2">&nbsp</td></tr>
+        <tr><td>Email Address: </td><td> <input type="email" id="emailAddress" name="emailAddress" /></td></tr>
     </table>
-    <br>
     <div><input type="Submit" value="Send Request">
     </form>
 </body>

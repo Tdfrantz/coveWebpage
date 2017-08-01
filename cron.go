@@ -3,6 +3,7 @@ package coveapi
 import (
 	"net/http"
 	// "golang.org/x/net/context"
+	"strconv"
 	"google.golang.org/appengine/datastore"
 	"net/url"
 	"encoding/json"
@@ -57,6 +58,13 @@ func cron(w http.ResponseWriter, r *http.Request){
 		} else {
 			log.Infof(c,"Putting it back in the queue")
 			endpoint = "/helperPeek"
+		}
+		if endpoint=="/helperEmail"{
+			v.Add("requestType", record.RequestType)
+			v.Add("success", strconv.FormatBool(record.Success))
+			v.Add("reason", record.Reason)
+			v.Add("submittedTimestamp", record.SubmittedTimestamp.String())
+			v.Add("lastPeekedTimestamp", record.LastPeekedTimestamp.String())
 		}
 
 		pt := taskqueue.NewPOSTTask(endpoint, v)

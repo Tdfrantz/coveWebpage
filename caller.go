@@ -10,8 +10,13 @@ import (
 	"google.golang.org/appengine/taskqueue"
 	"google.golang.org/appengine"
 	"strconv"
-	// "google.golang.org/appengine/log"
+	"google.golang.org/appengine/log"
 )
+
+type FormField struct{
+	Value string
+	ErrorMsg string
+}
 
 type Record struct{
 	RequestType string
@@ -27,15 +32,50 @@ type Record struct{
 
 func init(){
 	http.HandleFunc("/", index)
-	http.HandleFunc("/caller", caller)
 	http.HandleFunc("/helperPost", helperPost)
 	http.HandleFunc("/helperPeek", helperPeek)
 	http.HandleFunc("/cron", cron)
 	http.HandleFunc("/helperEmail", helperEmail)
+	http.HandleFunc("/favicon.ico", favicon)
 }
 
 func index(w http.ResponseWriter, r *http.Request){
-	render(w, "static/index.html", nil)
+	c := appengine.NewContext(r)
+	if r.Method=="POST"{
+		log.Infof(c, "Form has been submitted. Validating data now.")
+		if missingData, formFields:= validate(r); missingData{
+			log.Infof(c, "Data is missing! Rendering index")
+
+
+			// Make sure the formFields are in the right order 
+			// tableFields := []FormField{
+			// 	formFields["peekTimeout"],
+			// 	formFields["accessIdentifier"],
+			// 	formFields["secretKey"],
+			// 	formFields["databaseName"],
+			// 	formFields["databaseUsername"],
+			// 	formFields["databasePassword"],
+			// 	formFields["databaseServer"],
+			// 	formFields["apiEndpoint"],
+			// 	formFields["rmsType"],
+			// 	formFields["instanceName"],
+			// 	formFields["emailAddress"],
+			// }
+
+
+			render(w, "templates/index.html", formFields)
+		} else {
+			log.Infof(c, "We're good to go, on to sender.")
+			caller(c, w, formFields)
+			data := make(map[string]FormField)
+			data["confirmation"]=FormField{Value:"Thank you! Your request has been sent submitted. A report will be e-mailed to you shortly."}
+			render(w, "templates/index.html", data)
+		}
+	} else {
+		log.Infof(c, "Not a POST, rendering basic index")
+		data := make(map[string]FormField)
+		render(w, "templates/index.html", data)
+	}
 }
 
 func render(w http.ResponseWriter, filename string, data interface{}){
@@ -48,22 +88,12 @@ func render(w http.ResponseWriter, filename string, data interface{}){
 	}
 }
 
-func caller(w http.ResponseWriter, r *http.Request){
+func caller(c context.Context, w http.ResponseWriter, data map[string]FormField){
 
-	c := appengine.NewContext(r)
-
-	v, p, _ := validate(r,c)
-	if v{
-		// //formData := map[string]string{}
-		// render(w, "static/index.html", nil)
-		// return
-		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-	}
-
-	timeout, _ := strconv.Atoi(r.FormValue("peekTimeout"))
+	timeout, _ := strconv.Atoi(data["peekTimeout"].Value)
 	// Create a datastore entry for this request
 	record := &Record{
-		RequestType:r.FormValue("requestType"),
+		RequestType:data["requestType"].Value,
 		SubmittedTimestamp:time.Now(),
 		LastPeekedTimestamp:time.Now(),
 		PeekTimeout:timeout,
@@ -80,17 +110,17 @@ func caller(w http.ResponseWriter, r *http.Request){
 			
 			v := url.Values{}
 			v.Add("datastoreKey", key.Encode())
-			v.Add("emailAddress", "tdfrantz@mhsystems.com")
-			v.Add("requestType", p["requestType"])
-			v.Add("secretKey", p["secretKey"])
-			v.Add("accessIdentifier", p["accessIdentifier"])
-			v.Add("databaseName", p["databaseName"])
-			v.Add("databaseUsername", p["databaseUsername"])
-			v.Add("databasePassword", p["databasePassword"])
-			v.Add("databaseServer", p["databaseServer"])
-			v.Add("apiEndpoint", p["apiEndpoint"])
-			v.Add("rmsType", p["rmsType"])
-			v.Add("instanceName", p["instanceName"])
+			v.Add("emailAddress", data["emailAddress"].Value)
+			v.Add("requestType", record.RequestType)
+			v.Add("secretKey", data["secretKey"].Value)
+			v.Add("accessIdentifier", data["accessIdentifier"].Value)
+			v.Add("databaseName", data["databaseName"].Value)
+			v.Add("databaseUsername", data["databaseUsername"].Value)
+			v.Add("databasePassword", data["databasePassword"].Value)
+			v.Add("databaseServer", data["databaseServer"].Value)
+			v.Add("apiEndpoint", data["apiEndpoint"].Value)
+			v.Add("rmsType",data["rmsType"].Value)
+			v.Add("instanceName", data["instanceName"].Value)
 
 			t := taskqueue.NewPOSTTask("/helperPost", v)
 
@@ -107,88 +137,97 @@ func caller(w http.ResponseWriter, r *http.Request){
 
 }
 
-func validate(r *http.Request,c context.Context) (bool, map[string]string, map[string]string){
-	missingParams := false
-	params := make(map[string]string)
-	errors := make(map[string]string)
+func validate(r *http.Request) (missingParams bool, formFields map[string]FormField){
+	missingParams = false
+	formFields = make(map[string]FormField)
 
-
-	if requestType := r.FormValue("requestType"); requestType == ""{
+	requestType := FormField{ErrorMsg:"",}
+	if requestType.Value = r.FormValue("requestType"); requestType.Value == ""{
 		missingParams=true
-		errors["requestType"] = "Invalid request type value."
-	} else {
-		params["requestType"] = requestType
+		requestType.ErrorMsg = "Invalid request type value."
 	}
+	formFields["requestType"] = requestType
 	
-	if secretKey := r.FormValue("secretKey"); secretKey == ""{
+	secretKey := FormField{ErrorMsg:"",}
+	if secretKey.Value = r.FormValue("secretKey"); secretKey.Value == ""{
 		missingParams=true
-		errors["secretKey"] = "Invalid secret key value."
-	} else {
-		params["secretKey"] = secretKey
+		secretKey.ErrorMsg = "Invalid secret key value."
 	}
+	formFields["secretKey"] = secretKey
 
-	if accessIdentifier := r.FormValue("accessIdentifier"); accessIdentifier == ""{
+	accessIdentifier := FormField{ErrorMsg:"",}
+	if accessIdentifier.Value = r.FormValue("accessIdentifier"); accessIdentifier.Value == ""{
 		missingParams=true
-		errors["accessIdentifier"] = "Invalid access identifier value."
-	} else {
-		params["accessIdentifier"] = accessIdentifier
+		accessIdentifier.ErrorMsg = "Invalid access identifier value."
 	}
+	formFields["accessIdentifier"] = accessIdentifier
 
-	if databaseName := r.FormValue("databaseName"); databaseName == ""{
+	databaseName := FormField{ErrorMsg:""}
+	if databaseName.Value = r.FormValue("databaseName"); databaseName.Value == ""{
 		missingParams=true
-		errors["databaseName"] = "Invalid database name value."
-	} else {
-		params["databaseName"] = databaseName
+		databaseName.ErrorMsg = "Invalid database name value."
 	}
+	formFields["databaseName"] = databaseName
 
-	if databaseUsername := r.FormValue("databaseUsername"); databaseUsername == ""{
+	databaseUsername := FormField{ErrorMsg:"",}
+	if databaseUsername.Value = r.FormValue("databaseUsername"); databaseUsername.Value == ""{
 		missingParams=true
-		errors["databaseUsername"] = "Invalid database login name value."
-	} else {
-		params["databaseUsername"] = databaseUsername
+		databaseUsername.ErrorMsg = "Invalid database login name value."
 	}
+	formFields["databaseUsername"] = databaseUsername
 
-	if databasePassword := r.FormValue("databasePassword"); databasePassword == ""{
+	databasePassword := FormField{ErrorMsg:"",}
+	if databasePassword.Value = r.FormValue("databasePassword"); databasePassword.Value == ""{
 		missingParams=true
-		errors["databasePassword"] = "Invalid database login password value."
-	} else {
-		params["databasePassword"] = databasePassword
+		databasePassword.ErrorMsg = "Invalid database login password value."
 	}
+	formFields["databasePassword"] = databasePassword
 
-	if databaseServer := r.FormValue("databaseServer"); databaseServer == ""{
+	databaseServer := FormField{ErrorMsg:"",}
+	if databaseServer.Value = r.FormValue("databaseServer"); databaseServer.Value == ""{
 		missingParams=true
-		errors["databaseServer"] = "Invalid databse server value."
-	} else {
-		params["databaseServer"] = databaseServer
+		databaseServer.ErrorMsg = "Invalid database server value."
 	}
+	formFields["databaseServer"] = databaseServer
 
-	if apiEndpoint := r.FormValue("apiEndpoint"); apiEndpoint == ""{
+	apiEndpoint := FormField{ErrorMsg:"",}
+	if apiEndpoint.Value = r.FormValue("apiEndpoint"); apiEndpoint.Value == ""{
 		missingParams=true
-		errors["apiEndpoint"] = "Invalid api endpoint value."
-	} else {
-		params["apiEndpoint"] = apiEndpoint
+		apiEndpoint.ErrorMsg = "Invalid api endpoint value."
 	}
+	formFields["apiEndpoint"] = apiEndpoint
 
-	if rmsType := r.FormValue("rmsType"); rmsType == ""{
+	rmsType := FormField{ErrorMsg:"",}
+	if rmsType.Value = r.FormValue("rmsType"); rmsType.Value == ""{
 		missingParams=true
-		errors["rmsType"] = "Invalid rms type value."
-	} else {
-		params["rmsType"] = rmsType
+		rmsType.ErrorMsg = "Invalid rms type value."
 	}
+	formFields["rmsType"] = rmsType
 
-	if instanceName := r.FormValue("instanceName"); instanceName == ""{
+	instanceName := FormField{ErrorMsg:"",}
+	if instanceName.Value = r.FormValue("instanceName"); instanceName.Value == ""{
 		missingParams=true
-		errors["instanceName"] = "Invalid instance name value."
-	} else {
-		params["instanceName"] = instanceName
+		instanceName.ErrorMsg = "Invalid instance name value."
 	}
+	formFields["instanceName"] = instanceName
 
-	if emailAddress := r.FormValue("emailAddress"); emailAddress == ""{
+	emailAddress := FormField{ErrorMsg:"",}
+	if emailAddress.Value = r.FormValue("emailAddress"); emailAddress.Value == ""{
 		missingParams=true
-		errors["emailAddress"] = "Invalid email address value."
-	} else {
-		params["emailAddress"] = emailAddress
+		emailAddress.ErrorMsg = "Invalid email address value."
 	}
+	formFields["emailAddress"] = emailAddress
 
-	return missingParams, params, errors
+	peekTimeout := FormField{ErrorMsg:"",}
+	if peekTimeout.Value = r.FormValue("peekTimeout"); peekTimeout.Value == ""{
+		missingParams=true
+		peekTimeout.ErrorMsg = "Invalid peek timeout value."
+	}
+	formFields["peekTimeout"] = peekTimeout
+
+	return missingParams, formFields
+}
+
+func favicon(w http.ResponseWriter, r *http.Request){
+	http.ServeFile(w, r, "assets/favicon.ico")
 }

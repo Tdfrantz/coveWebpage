@@ -3,12 +3,14 @@ package coveapi
 import (
 	"net/http"
 	"net/url"
+	"bytes"
+	"html/template"
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/taskqueue"
 	"google.golang.org/appengine/mail"
 	"golang.org/x/net/context"
-	// "google.golang.org/appengine/log"
+	"google.golang.org/appengine/log"
 	"encoding/json"
 	"time"
 )
@@ -69,16 +71,8 @@ func helperPost(w http.ResponseWriter,r *http.Request){
 			v := url.Values{}
 
 			v.Add("datastoreKey", datastoreKey.Encode())
-			// v.Add("requestType", block.RequestType)
 			v.Add("secretKey", secretKey)
 			v.Add("accessIdentifier", accessIdentifier)
-			// v.Add("databaseName",block.DatabaseName)
-			// v.Add("databaseUsername", block.DatabaseLoginName)
-			// v.Add("databasePassword", block.DatabaseLoginPassword)
-			// v.Add("databaseServer", block.DatabaseServer)
-			// v.Add("apiEndpoint", block.ApiEndpoint)
-			// v.Add("rmsType", block.RMSType)
-			// v.Add("instanceName", block.InstanceName)
 			v.Add("emailAddress", r.FormValue("emailAddress"))
 			v.Add("interaction", interaction)
 
@@ -97,7 +91,7 @@ func helperPost(w http.ResponseWriter,r *http.Request){
 		logErrorAndReturnInternalServerError(c, err, w)
 	}
 
-	w.WriteHeader(http.StatusOK)
+	// w.WriteHeader(http.StatusOK)
 }
 
 func helperPeek(w http.ResponseWriter,r *http.Request){
@@ -185,24 +179,60 @@ func helperPeek(w http.ResponseWriter,r *http.Request){
 
 func helperEmail(w http.ResponseWriter, r *http.Request){
 	c := appengine.NewContext(r)
+
+	requestType := r.FormValue("requestType")
 	msg := &mail.Message{
-		Sender: "tdfrantz@mhsytems.com",
+		Sender: "Big Daddy Tizzle <tdfrantz@mhsytems.com>",
 		To: []string{r.FormValue("emailAddress")},
-		Subject: "See you tonight",
+		Subject: "COVE API Test Report - " + requestType,
+	}
+	
+	result := struct{
+		Success string
+		Reason string
+		SubmittedTimestamp string
+		LastPeekedTimestamp string
+	}{
+		Success : r.FormValue("success"),
+		Reason : r.FormValue("reason"),
+		SubmittedTimestamp : r.FormValue("submittedTimestamp"),
+		LastPeekedTimestamp : r.FormValue("lastPeekedTimestamp"),
 	}
 
-	s := r.FormValue("success")
-	success := false
-	if s=="true"{
-		success = true
+	var body bytes.Buffer
+	log.Infof(c, "Request Type: %s", requestType)
+	
+	if requestType=="Ping"{
+			tmpl, err := template.ParseFiles("templates/ping_table.html","templates/email_base.html")
+			if err!=nil{
+				logErrorAndReturnInternalServerError(c, err, w)
+			}
+	
+			log.Infof(c, "result values: %s, %s, %s, %s", result.Success, result.Reason, result.SubmittedTimestamp, result.LastPeekedTimestamp)		
+			if err := tmpl.Execute(&body, result); err!=nil{
+				logErrorAndReturnInternalServerError(c, err, w)
+			}
+			log.Infof(c,"body number 1: %s", body.String())
+			msg.Body = body.String()
 	}
+		// case "ProductMetadataFetch":
+		// 	tmpl := template.Must(template.ParseFiles("ping_table.html","email_base.html"))
+		// case "ProductInventoryUpdate":
+		// 	tmpl := template.Must(template.ParseFiles("ping_table.html","email_base.html"))
+		// case "FullTestSuite":
+		// 	tmpl := template.Must(template.ParseFiles("ping_table.html","email_base.html"))
+	// s := r.FormValue("Success")
+	// success := false
+	// if s=="true"{
+	// 	success = true
+	// }
 
-	if success{
-		msg.Body = "We have liftoff!"
-	} else {
-		msg.Body = "That's a negatory big buddy."
-	}
-
+	// if success{
+	// 	msg.Body = "We have liftoff!"
+	// } else {
+	// 	msg.Body = "That's a negatory big buddy."
+	// }
+	log.Infof(c,"body number 2: %s", body.String())
 	if err:=mail.Send(c,msg); err!=nil{
 		http.Error(w, err.Error(), http.StatusOK)
 	}
