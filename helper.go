@@ -10,7 +10,7 @@ import (
 	"google.golang.org/appengine/taskqueue"
 	"google.golang.org/appengine/mail"
 	"golang.org/x/net/context"
-	"google.golang.org/appengine/log"
+	// "google.golang.org/appengine/log"
 	"encoding/json"
 	"time"
 )
@@ -200,19 +200,13 @@ func helperEmail(w http.ResponseWriter, r *http.Request){
 	}
 
 	var body bytes.Buffer
-	log.Infof(c, "Request Type: %s", requestType)
 	
 	if requestType=="Ping"{
-			tmpl, err := template.ParseFiles("templates/ping_table.html","templates/email_base.html")
-			if err!=nil{
-				logErrorAndReturnInternalServerError(c, err, w)
-			}
-	
-			log.Infof(c, "result values: %s, %s, %s, %s", result.Success, result.Reason, result.SubmittedTimestamp, result.LastPeekedTimestamp)		
+			tmpl := template.Must(template.New("email_base").ParseFiles("templates/ping_table.html", "templates/email_base.html"))
+		
 			if err := tmpl.Execute(&body, result); err!=nil{
 				logErrorAndReturnInternalServerError(c, err, w)
 			}
-			log.Infof(c,"body number 1: %s", body.String())
 			msg.Body = body.String()
 	}
 		// case "ProductMetadataFetch":
@@ -232,7 +226,6 @@ func helperEmail(w http.ResponseWriter, r *http.Request){
 	// } else {
 	// 	msg.Body = "That's a negatory big buddy."
 	// }
-	log.Infof(c,"body number 2: %s", body.String())
 	if err:=mail.Send(c,msg); err!=nil{
 		http.Error(w, err.Error(), http.StatusOK)
 	}
